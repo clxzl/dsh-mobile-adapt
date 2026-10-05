@@ -1,0 +1,8 @@
+# dsh-mobile-adapt bundle patch
+#
+# Mounts the plugin's loader row. The package declares `dsh.client`
+# (`platform: web`), so the client-modules host half turns this enabled entry
+# into a browser bundle served under /plugins — no extra wiring needed.
+- insert:
+    - id: mobile-adapt
+      name: 'dsh-mobile-adapt'

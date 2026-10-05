@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # lib/client.js is a committed build artifact — DSH loads it directly, so
+      # anyone installing the package must never need to run a build. That only
+      # works if the committed artifact stays in sync with src/.
+      - name: Rebuild and check lib/ is committed in sync
+        run: |
+          npm run build
+          if ! git diff --quiet -- lib/; then
+            echo "::error::lib/ is out of date. Run 'npm run build' and commit the result."
+            git --no-pager diff --stat -- lib/
+            exit 1
+          fi
+          echo "lib/ is in sync with src/"
+
+      - name: Syntax check the bundle
+        run: |
+          node --check lib/client.js
+          node --check lib/index.js
+
+      # The bundle is hand-written lazy-CJS. A malformed wrapper fails silently
+      # in the browser, so assert the shape the host actually requires.
+      - name: Assert the loader contract
+        run: |
+          node -e "
+          const src = require('node:fs').readFileSync('lib/client.js', 'utf8');
+          const need = [
+            ['loader wrapper', 'window.__ModuleLoader__.load('],
+            ['plugin id',      'id: \"dsh-mobile-adapt\"'],
+            ['apply export',   'exports.apply = apply'],
+            ['inject export',  'exports.inject = inject'],
+          ];
+          let bad = 0;
+          for (const [label, needle] of need) {
+            if (!src.includes(needle)) { console.log('::error::missing ' + label); bad++; }
+          }
+          if (!src.includes('html[data-dsh-mobile]')) {
+            console.log('::error::styles are not gated on html[data-dsh-mobile] — desktop would be affected');
+            bad++;
+          }
+          if (bad) process.exit(1);
+          console.log('loader contract OK');
+          "
+
+      - name: Validate package metadata
+        run: |
+          node -e "
+          const p = require('./package.json');
+          let bad = 0;
+          const fail = (m) => { console.log('::error::' + m); bad = 1; };
+          if (!p.name || !p.version) fail('name/version missing');
+          if (!p.dsh || !p.dsh.client || p.dsh.client.platform !== 'web') fail('dsh.client.platform must be web');
+          if (!p.dsh.bundle || !p.dsh.bundle.patch) fail('dsh.bundle.patch missing');
+          if (!p.files || !p.files.includes('lib')) fail('files must include lib');
+          const repos = [p.repository && p.repository.url, p.homepage, p.bugs && p.bugs.url].join(' ');
+          if (/YOUR_GITHUB_USERNAME/.test(repos)) fail('placeholder YOUR_GITHUB_USERNAME still present');
+          if (bad) process.exit(1);
+          console.log('package metadata OK - v' + p.version);
+          "
+
+      - name: Preview what would be published
+        run: npm pack --dry-run

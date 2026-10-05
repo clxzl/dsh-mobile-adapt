@@ -1,0 +1,6 @@
+node_modules/
+_chrome/
+_chrome2/
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,60 @@
+name: Release
+
+# Push a tag like v1.1.0 and this publishes to npm and opens a GitHub Release.
+#
+#   npm version 1.1.0 --no-git-tag-version   # or edit package.json by hand
+#   # update CHANGELOG.md
+#   npm run build && git add -A && git commit -m "chore: release v1.1.0"
+#   git tag v1.1.0 && git push && git push --tags
+#
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write # create the GitHub Release
+  id-token: write # npm provenance (signed build attestation)
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      # Two cheap guards that catch the mistakes this workflow exists to prevent.
+      - name: Tag must match package.json version
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAG="${GITHUB_REF_NAME#v}"
+          if [ "$PKG" != "$TAG" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match package.json version ${PKG}"
+            exit 1
+          fi
+          echo "tag ${GITHUB_REF_NAME} matches package.json (${PKG})"
+
+      - name: Committed lib/ must be in sync with src/
+        run: |
+          npm run build
+          if ! git diff --quiet -- lib/; then
+            echo "::error::lib/ is out of date at this tag. Run 'npm run build' and commit the result."
+            git --no-pager diff --stat -- lib/
+            exit 1
+          fi
+          echo "lib/ is in sync"
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          name: ${{ github.ref_name }}

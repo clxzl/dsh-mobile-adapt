@@ -1,0 +1,73 @@
+{
+  "name": "dsh-mobile-adapt",
+  "version": "1.1.0",
+  "description": "Phone and tablet adaptation layer for the DeepSeek Harness (DSH) web GUI: single-column layout with a drawer sidebar, readable type, 40px touch targets, safe-area and soft-keyboard handling.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "build.mjs",
+    "cordis.patch.yml",
+    "docs",
+    "README.md",
+    "README_EN.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    },
+    "manifestVersion": 1
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/cordis": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek",
+    "deepseek-harness",
+    "mobile",
+    "responsive",
+    "touch",
+    "android",
+    "ios",
+    "safe-area"
+  ],
+  "license": "MIT",
+  "author": "HuangFei",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clxzl/dsh-mobile-adapt.git"
+  },
+  "homepage": "https://github.com/clxzl/dsh-mobile-adapt#readme",
+  "bugs": {
+    "url": "https://github.com/clxzl/dsh-mobile-adapt/issues"
+  }
+}

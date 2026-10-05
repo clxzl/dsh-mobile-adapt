@@ -1,0 +1,396 @@
+/* ==========================================================================
+   dsh-mobile-adapt — phone/tablet adaptation for the DSH Web GUI
+   Everything is gated on html[data-dsh-mobile], which the plugin sets from
+   the live viewport; a desktop window keeps the stock experience untouched.
+   ========================================================================== */
+
+/* --- 0. Touch fundamentals ------------------------------------------------ */
+html[data-dsh-mobile] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html[data-dsh-mobile] button,
+html[data-dsh-mobile] [role="button"],
+html[data-dsh-mobile] a,
+html[data-dsh-mobile] [data-slot] {
+  touch-action: manipulation;
+}
+/* The composer's own scroller keeps native panning. */
+html[data-dsh-mobile] [data-input-scroll],
+html[data-dsh-mobile] [data-conversation-scroll] {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* --- 1. Dynamic viewport -------------------------------------------------- */
+/* The stock sheet pins html/body/#root to height:100%, which on a phone means
+   the desktop-sized viewport: the bottom of the shell can sit under the
+   browser chrome. dvh tracks the *current* visible viewport instead. */
+@supports (height: 100dvh) {
+  html[data-dsh-mobile],
+  html[data-dsh-mobile] body,
+  html[data-dsh-mobile] #root {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+/* While the soft keyboard is open the app frame gives up exactly the keyboard
+   inset, so the composer stays glued above the keyboard. */
+html[data-dsh-mobile] #root > [data-slot="root"] > div {
+  height: calc(100% - var(--dsh-mobile-keyboard-inset, 0px));
+  transition: height 140ms ease-out;
+}
+html[data-dsh-mobile][data-dsh-mobile-keyboard] #root > [data-slot="root"] > div {
+  transition: none;
+}
+
+/* --- 2. Single-column layout --------------------------------------------- */
+/* The frame's columns come from an inline grid-template-columns written by
+   AppFrame's JS solver (56px rail + centre + optional right track). On a phone
+   that 56px rail alone eats 15% of the screen, so the columns are flattened
+   and the centre takes everything. The sidebar itself becomes an overlay
+   drawer (section 3) and therefore costs no layout width. */
+html[data-dsh-mobile] #root > [data-slot="root"] > div {
+  grid-template-columns: 0px minmax(0, 1fr) 0px !important;
+}
+/* The drawer is taken out of the grid flow by position:fixed, so auto
+   placement would shift the centre and right items one track to the left
+   (centre landing in the 0px track). Pin every column explicitly. */
+html[data-dsh-mobile] [data-dsh-mobile-center] {
+  grid-column: 2;
+}
+html[data-dsh-mobile] [data-rightbar-col] {
+  grid-column: 3;
+}
+/* Width drag handles are pointer-only affordances. */
+html[data-dsh-mobile] [data-side] {
+  display: none !important;
+}
+
+/* --- 3. Sidebar drawer ---------------------------------------------------- */
+html[data-dsh-mobile] [data-dsh-mobile-sidebar] {
+  position: fixed !important;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: auto !important;
+  width: min(86vw, 340px) !important;
+  min-width: 0 !important;
+  max-width: 86vw !important;
+  height: 100% !important;
+  margin: 0 !important;
+  z-index: 62;
+  display: block !important;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-base));
+  border-right: 0.5px solid var(--dsw-alias-border-l3);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 42%);
+  transform: translate3d(-102%, 0, 0);
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+html[data-dsh-mobile] [data-dsh-mobile-sidebar][data-dsh-mobile-drawer="open"] {
+  transform: translate3d(0, 0, 0);
+}
+/* The drawer owns the full height; the stock column's chrome offset is dropped. */
+html[data-dsh-mobile] [data-dsh-mobile-sidebar] > * {
+  max-height: 100%;
+}
+/* While the drawer is open the page behind must not scroll. The
+   data-dsh-mobile gate matters: the drawer state is also mirrored on desktop
+   (where the shell's own sidebar is simply expanded), and locking the page
+   there would break normal scrolling. */
+html[data-dsh-mobile][data-dsh-mobile-drawer="open"],
+html[data-dsh-mobile][data-dsh-mobile-drawer="open"] body {
+  overflow: hidden !important;
+}
+
+/* Scrim behind the drawer. */
+html[data-dsh-mobile] [data-dsh-mobile-scrim] {
+  display: block;
+}
+[data-dsh-mobile-scrim] {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  background: rgb(0 0 0 / 46%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-dsh-mobile][data-dsh-mobile-drawer="open"] [data-dsh-mobile-scrim] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Drawer launcher (hamburger). Sits in the safe-area corner. */
+[data-dsh-mobile-launcher] {
+  display: none;
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  z-index: 60;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid var(--dsw-alias-border-l2);
+  border-radius: var(--dsw-radius-md, 8px);
+  background: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base));
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-elevation-panel, 0 2px 10px rgb(0 0 0 / 20%));
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+html[data-dsh-mobile] [data-dsh-mobile-launcher] {
+  display: flex;
+}
+html[data-dsh-mobile][data-dsh-mobile-drawer="open"] [data-dsh-mobile-launcher] {
+  display: none;
+}
+[data-dsh-mobile-launcher] svg {
+  display: block;
+  pointer-events: none;
+}
+/* Give the conversation header room for the launcher, and keep it clear of the
+   notch when the PWA runs standalone behind a translucent status bar. */
+html[data-dsh-mobile] [data-slot="conversation.header"] > header {
+  padding-left: 56px;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* --- 4. Readability ------------------------------------------------------- */
+/* 14px is a desktop body size; phones want a step up. The token ladder
+   (--dsh-content-font-delta*) is derived in CSS, so headings and secondary
+   text follow automatically. */
+html[data-dsh-mobile] body {
+  --dsh-content-font-size: 15px !important;
+}
+/* Long code lines and wide tables must scroll inside their own box instead of
+   stretching the conversation column past the screen. */
+html[data-dsh-mobile] [data-slot="main.conversation"] pre {
+  overflow-x: auto !important;
+  max-width: 100% !important;
+  -webkit-overflow-scrolling: touch;
+}
+html[data-dsh-mobile] [data-slot="main.conversation"] table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+html[data-dsh-mobile] [data-slot="main.conversation"] img,
+html[data-dsh-mobile] [data-slot="main.conversation"] video,
+html[data-dsh-mobile] [data-slot="main.conversation"] canvas {
+  max-width: 100% !important;
+  height: auto;
+}
+html[data-dsh-mobile] [data-slot="main.conversation"] a,
+html[data-dsh-mobile] [data-slot="main.conversation"] code {
+  overflow-wrap: anywhere;
+}
+
+/* --- 5. Touch targets and text-entry -------------------------------------- */
+@media (pointer: coarse) {
+  html[data-dsh-mobile] [data-slot="conversation.header"] button,
+  html[data-dsh-mobile] [data-slot="conversation.composer"] button[aria-label],
+  html[data-dsh-mobile] [data-slot="sidebar"] button[aria-label] {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+/* iOS Safari zooms the whole page when a control smaller than 16px takes
+   focus; the composer is a contenteditable, so it is covered too. */
+html[data-dsh-mobile] [data-composer-input],
+html[data-dsh-mobile] [contenteditable="true"],
+html[data-dsh-mobile] textarea,
+html[data-dsh-mobile] input {
+  font-size: 16px !important;
+}
+/* Keep the composer above the home indicator. */
+html[data-dsh-mobile] [data-composer-seat] {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* Menus and popovers never exceed the screen. */
+html[data-dsh-mobile] [data-dsh-mobile-surface] {
+  max-width: calc(100vw - 16px) !important;
+}
+
+/* --- 6. Let the shell's single-line previews wrap ------------------------- */
+/* Flow and tool summaries are authored as ONE nowrap line, sized for a desktop
+   column: measured 1000-4000px wide inside a 390px viewport. Two traps here:
+   the slot host above them is display: contents (so overflow on it does
+   nothing), and the line itself is an inline span (so max-width on it does
+   nothing either). What actually happens is the shell's own column clips it,
+   leaving the reader roughly the first third of every preview with no
+   ellipsis. Wrapping is the only fix that keeps the information. */
+html[data-dsh-mobile] [data-slot="main.conversation"] [class*="summary"],
+html[data-dsh-mobile] [data-slot="main.conversation"] [class*="summary"] * {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+/* Backstop on the real grid box — not on the slot host, which is contents. */
+html[data-dsh-mobile] [data-dsh-mobile-center] {
+  overflow-x: clip;
+}
+
+/* --- 7. Code blocks ------------------------------------------------------- */
+/* The desktop sheet pins code at 11px through the font shorthand; that is
+   simply unreadable on a phone. */
+html[data-dsh-mobile] [data-slot="main.conversation"] pre {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+/* --- 8. Tap areas --------------------------------------------------------- */
+@media (pointer: coarse) {
+  /* Flow / tool rows render 25px tall at desktop density, yet they are the
+     primary way to expand a step on a touch screen. */
+  html[data-dsh-mobile] [data-slot="main.conversation"] [class*="row"] {
+    min-height: 36px;
+  }
+  /* Code-block toolbars and message feedback buttons ship at 24-29px. */
+  html[data-dsh-mobile] [data-slot="main.conversation"] button {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+/* --- 9. Settings dialog: two desktop columns do not fit a phone ----------- */
+/* The stock panel is a two-column dialog: a fixed 188px nav rail beside the
+   options. In a 390px viewport that leaves ~154px for the content, so every
+   option label wraps one character per line — measured, the section box came
+   out 101px wide and 3562px tall with its column clipping. Collapse it to a
+   single column with the nav as a horizontal strip on top.
+   :has(> nav) keys off the dialog's own structure rather than a hashed
+   class name; only the settings panel has a nav rail as a direct child. */
+html[data-dsh-mobile] [role="dialog"]:has(> nav) {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 100 !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  flex-direction: column !important;
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+/* nav rail -> top strip */
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > nav {
+  flex: none !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  flex-direction: column !important;
+  border-right: 0 !important;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l3) !important;
+  padding: 0 !important;
+}
+/* the rail's own title row is redundant: the panel header already reads 设置 */
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > nav > :first-child {
+  display: none !important;
+}
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > nav > :last-child {
+  flex-direction: row !important;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  gap: 0 !important;
+  padding: 0 8px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none;
+}
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > nav > :last-child::-webkit-scrollbar {
+  display: none;
+}
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > nav > :last-child > button {
+  flex: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 46px !important;
+  padding: 0 14px !important;
+  white-space: nowrap !important;
+}
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > nav > :last-child > button span {
+  width: auto !important;
+  max-width: none !important;
+  font-size: 13px !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+/* the options column takes everything that is left */
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > :last-child,
+html[data-dsh-mobile] [role="dialog"]:has(> nav) > :last-child > * {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  /* the stock options column is content-box: width:100% plus its own
+     horizontal padding would exceed the panel and add a stray scrollbar */
+  box-sizing: border-box !important;
+}
+@media (pointer: coarse) {
+  /* the preset rows ship a 28x32 查看配置 button */
+  html[data-dsh-mobile] [role="dialog"]:has(> nav) button {
+    min-width: 32px;
+    min-height: 36px;
+  }
+  html[data-dsh-mobile] [role="dialog"]:has(> nav) [class*="close"] {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+  /* the font-size stepper ships as 17x32 */
+  html[data-dsh-mobile] [role="dialog"]:has(> nav) [aria-label="增大字号"],
+  html[data-dsh-mobile] [role="dialog"]:has(> nav) [aria-label="减小字号"] {
+    min-width: 32px !important;
+  }
+}
+
+/* --- 10. Drawer internals ------------------------------------------------- */
+/* The drawer column is sized by this plugin (min(86vw, 340px)) while the
+   shell's sidebar component still renders at its desktop width of 280px,
+   leaving a dead gutter on the right. Let the component own the full drawer. */
+html[data-dsh-mobile] [data-slot="sidebar"] > * {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+/* The keyboard shortcut hint (Ctrl+Alt+N) means nothing on a phone, and it is
+   what squeezes the 新会话 label into a clipped mask. */
+html[data-dsh-mobile] [data-slot="sidebar"] [class*="hortcut"],
+html[data-dsh-mobile] [data-slot="sidebar"] kbd {
+  display: none !important;
+}
+/* The workspace header's action cluster is pinned to a 60px width while its
+   buttons need ~90px, so the last one gets clipped; free it and let the flex
+   row place it. */
+html[data-dsh-mobile] [data-slot="sidebar"] [class*="headerActions"] {
+  flex: none !important;
+  width: auto !important;
+  max-width: none !important;
+}
+@media (pointer: coarse) {
+  /* Session and project rows are div role=treeitem, not buttons, so the button
+     sizing rule never reached them: they shipped at 32-34px tall. */
+  html[data-dsh-mobile] [data-slot="sidebar"] [role="treeitem"] {
+    min-height: 40px;
+  }
+  html[data-dsh-mobile] [data-slot="sidebar"] [class*="searchSlot"] button,
+  html[data-dsh-mobile] [data-slot="sidebar"] [class*="searchButton"] {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
