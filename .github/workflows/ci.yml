@@ -44,7 +44,7 @@ jobs:
           const src = require('node:fs').readFileSync('lib/client.js', 'utf8');
           const need = [
             ['loader wrapper', 'window.__ModuleLoader__.load('],
-            ['plugin id',      'id: \"dsh-mobile-adapt\"'],
+            ['plugin id',      'id: \"@clxzl/dsh-mobile-adapt\"'],
             ['apply export',   'exports.apply = apply'],
             ['inject export',  'exports.inject = inject'],
           ];

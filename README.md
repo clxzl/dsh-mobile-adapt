@@ -34,7 +34,7 @@ DSH 的 Web GUI 是一套**纯桌面布局**：样式表里只有 `prefers-reduc
 ## 安装
 
 ```bash
-dsh plugin --profile web add dsh-mobile-adapt
+dsh plugin --profile web add @clxzl/dsh-mobile-adapt
 ```
 
 然后重启 dsh：

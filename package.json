@@ -1,5 +1,5 @@
 {
-  "name": "dsh-mobile-adapt",
+  "name": "@clxzl/dsh-mobile-adapt",
   "version": "1.1.0",
   "description": "Phone and tablet adaptation layer for the DeepSeek Harness (DSH) web GUI: single-column layout with a drawer sidebar, readable type, 40px touch targets, safe-area and soft-keyboard handling.",
   "type": "module",

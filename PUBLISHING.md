@@ -90,14 +90,14 @@ npm pack --dry-run
 预期包含：`lib/`、`src/`、`build.mjs`、`cordis.patch.yml`、`docs/`（截图）、
 几个 README、CHANGELOG、LICENSE。
 
-> 包名 `dsh-mobile-adapt` 目前未被占用（发之前用 `npm view dsh-mobile-adapt` 再确认一次）。
+> 包名 `dsh-mobile-adapt` 目前未被占用（发之前用 `npm view @clxzl/dsh-mobile-adapt` 再确认一次）。
 > 如果已被占用，改 `package.json` 的 `name` 即可，别忘了一并改 `cordis.patch.yml` 里的
 > `name:` 字段——两处必须一致。
 
 ## 3. 别人怎么装
 
 ```bash
-dsh plugin --profile web add dsh-mobile-adapt
+dsh plugin --profile web add @clxzl/dsh-mobile-adapt
 ```
 
 然后重启 dsh。包内声明了 `dsh.bundle.patch`，`dsh plugin add` 会自动把它挂进 profile 的
@@ -132,5 +132,5 @@ npm publish
 - [ ] `package.json` 里 3 处 `YOUR_GITHUB_USERNAME` 已替换
 - [ ] `npm run build` 之后 `git status` 是干净的（说明构建产物已同步提交）
 - [ ] `npm pack --dry-run` 的文件列表符合预期
-- [ ] 在干净环境试装一次：`dsh plugin --profile web add dsh-mobile-adapt`
+- [ ] 在干净环境试装一次：`dsh plugin --profile web add @clxzl/dsh-mobile-adapt`
 - [ ] 桌面端打开确认**没有**被影响（所有规则都 gate 在 `html[data-dsh-mobile]` 下）

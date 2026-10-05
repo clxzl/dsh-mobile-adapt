@@ -4,3 +4,4 @@ _chrome2/
 *.log
 .DS_Store
 Thumbs.db
+.npmrc

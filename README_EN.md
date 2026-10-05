@@ -43,7 +43,7 @@ the plugin leaves no attribute residue when it is not active.
 ## Install
 
 ```bash
-dsh plugin --profile web add dsh-mobile-adapt
+dsh plugin --profile web add @clxzl/dsh-mobile-adapt
 ```
 
 Then restart dsh:
